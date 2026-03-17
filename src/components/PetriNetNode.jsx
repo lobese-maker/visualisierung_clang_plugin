@@ -1,11 +1,33 @@
-// PetriNetNode.jsx - DYNAMIC SIZING VERSION
+// PetriNetNode.jsx - DYNAMIC SIZING VERSION WITH HTML PARSING
 import React, { useMemo } from 'react';
 import { Handle, Position } from 'reactflow';
+
+// HTML parsing function
+const parseHtmlLabel = (htmlString) => {
+    if (!htmlString) return '';
+
+    // Convert HTML tags to React-friendly format
+    let parsed = htmlString
+        // Replace bold tags
+        .replace(/<B>(.*?)<\/B>/gi, '<strong>$1</strong>')
+        // Replace line breaks
+        .replace(/<BR\/?>/gi, '<br/>')
+        // Replace spans
+        .replace(/<span(.*?)>(.*?)<\/span>/gi, '<span$1>$2</span>')
+        // Decode HTML entities
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"');
+
+    return parsed;
+};
 
 const PetriNetNode = ({ data, selected }) => {
     const {
         type,           // 'place' or 'transition'
         label,
+        htmlLabel,      // HTML-formatted label
         tokens = [],
         firing = false
     } = data;
@@ -13,16 +35,25 @@ const PetriNetNode = ({ data, selected }) => {
     const isPlace = type === 'place';
     const isTransition = type === 'transition';
 
+    // Use htmlLabel if available, otherwise use regular label
+    const displayLabel = htmlLabel || label;
+
+    // Parse the HTML label for display
+    const parsedHtmlLabel = useMemo(() => {
+        return parseHtmlLabel(displayLabel);
+    }, [displayLabel]);
+
     // Calculate dynamic dimensions based on content
     const { nodeWidth, nodeHeight, fontSize, padding } = useMemo(() => {
         const basePlaceSize = 80;
         const baseTransitionWidth = 100;
         const baseTransitionHeight = 50;
 
-        // Calculate text width
+        // Calculate text width - use raw text without HTML tags
         const getTextWidth = (text) => {
-            // Approximate width based on character count
-            const charCount = text?.length || 0;
+            // Remove HTML tags for width calculation
+            const cleanText = text?.replace(/<[^>]*>/g, '') || '';
+            const charCount = cleanText.length || 0;
             return Math.max(80, Math.min(200, charCount * 8 + 40));
         };
 
@@ -31,8 +62,15 @@ const PetriNetNode = ({ data, selected }) => {
             let lines = 1;
 
             // Count lines in label (if it has line breaks)
-            if (text && text.includes('\n')) {
-                lines += text.split('\n').length - 1;
+            const cleanText = text?.replace(/<[^>]*>/g, '') || '';
+            if (cleanText && cleanText.includes('\n')) {
+                lines += cleanText.split('\n').length - 1;
+            }
+
+            // Count <br> tags in HTML
+            if (text && text.includes('<BR')) {
+                const brCount = (text.match(/<BR\/?>/gi) || []).length;
+                lines += brCount;
             }
 
             // Add line for token display if needed
@@ -46,7 +84,8 @@ const PetriNetNode = ({ data, selected }) => {
         if (isPlace) {
             const width = basePlaceSize;
             const height = basePlaceSize;
-            const fontSize = Math.min(14, Math.max(10, 14 - (label.length - 8) * 0.5));
+            const cleanText = displayLabel?.replace(/<[^>]*>/g, '') || '';
+            const fontSize = Math.min(14, Math.max(10, 14 - (cleanText.length - 8) * 0.5));
 
             return {
                 nodeWidth: width,
@@ -57,9 +96,10 @@ const PetriNetNode = ({ data, selected }) => {
         }
 
         if (isTransition) {
-            const width = getTextWidth(label);
-            const height = getTextHeight(label, tokens);
-            const fontSize = Math.min(14, Math.max(10, 14 - (label.length - 10) * 0.3));
+            const width = getTextWidth(displayLabel);
+            const height = getTextHeight(displayLabel, tokens);
+            const cleanText = displayLabel?.replace(/<[^>]*>/g, '') || '';
+            const fontSize = Math.min(14, Math.max(10, 14 - (cleanText.length - 10) * 0.3));
 
             return {
                 nodeWidth: width,
@@ -75,7 +115,7 @@ const PetriNetNode = ({ data, selected }) => {
             fontSize: 14,
             padding: 10
         };
-    }, [label, tokens, isPlace, isTransition]);
+    }, [displayLabel, tokens, isPlace, isTransition]);
 
     // Get colors
     const getColors = () => {
@@ -142,11 +182,13 @@ const PetriNetNode = ({ data, selected }) => {
         lineHeight: '1.3',
     };
 
-    // Parse label into lines
+    // Parse label into lines for non-HTML display
     const labelLines = useMemo(() => {
-        if (!label) return [''];
-        return label.split('\n').map(line => line.trim());
-    }, [label]);
+        if (!displayLabel) return [''];
+        // Remove HTML tags and split by line breaks
+        const cleanText = displayLabel.replace(/<[^>]*>/g, '');
+        return cleanText.split('\n').map(line => line.trim());
+    }, [displayLabel]);
 
     // Get first token for display
     const firstToken = tokens && tokens.length > 0 ? tokens[0] : null;
@@ -275,57 +317,87 @@ const PetriNetNode = ({ data, selected }) => {
         );
     };
 
+    // Render HTML content
+    const renderHtmlContent = () => {
+        if (!parsedHtmlLabel || !parsedHtmlLabel.includes('<')) {
+            // Fallback to plain text
+            return (
+                <div style={{
+                    zIndex: 2,
+                    position: 'relative',
+                    width: '100%',
+                }}>
+                    {labelLines.map((line, index) => (
+                        <div
+                            key={index}
+                            style={{
+                                marginBottom: index < labelLines.length - 1 ? '2px' : '0',
+                            }}
+                        >
+                            {line}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        // Render HTML content
+        return (
+            <div
+                style={{
+                    zIndex: 2,
+                    position: 'relative',
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+                dangerouslySetInnerHTML={{ __html: parsedHtmlLabel }}
+            />
+        );
+    };
+
     return (
         <div style={nodeStyle}>
-            {/* Node label with multiple lines */}
-            <div style={{
-                zIndex: 2,
-                position: 'relative',
-                width: '100%',
-            }}>
-                {labelLines.map((line, index) => (
-                    <div
-                        key={index}
-                        style={{
-                            marginBottom: index < labelLines.length - 1 ? '2px' : '0',
-                        }}
-                    >
-                        {line}
-                    </div>
-                ))}
+            {/* Node label with HTML parsing */}
+            {renderHtmlContent()}
 
-                {/* Show first token name for places with tokens */}
-                {isPlace && firstToken && (
-                    <div style={{
-                        fontSize: Math.max(9, fontSize - 3),
-                        color: '#4a5568',
-                        marginTop: '4px',
-                        opacity: 0.8,
-                        fontWeight: 'normal',
-                        maxWidth: '100%',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        padding: '0 5px',
-                    }}>
-                        {firstToken}
-                    </div>
-                )}
+            {/* Show first token name for places with tokens */}
+            {isPlace && firstToken && (
+                <div style={{
+                    fontSize: Math.max(9, fontSize - 3),
+                    color: '#4a5568',
+                    marginTop: '4px',
+                    opacity: 0.8,
+                    fontWeight: 'normal',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    padding: '0 5px',
+                    position: 'relative',
+                    zIndex: 2,
+                }}>
+                    {firstToken}
+                </div>
+            )}
 
-                {/* Show token info for transitions if needed */}
-                {isTransition && tokenCount > 0 && (
-                    <div style={{
-                        fontSize: Math.max(10, fontSize - 2),
-                        color: colors.text,
-                        marginTop: '4px',
-                        opacity: 0.7,
-                        fontWeight: 'normal',
-                        fontStyle: 'italic',
-                    }}>
-                        {tokenCount} token{tokenCount !== 1 ? 's' : ''}
-                    </div>
-                )}
-            </div>
+            {/* Show token info for transitions if needed */}
+            {isTransition && tokenCount > 0 && (
+                <div style={{
+                    fontSize: Math.max(10, fontSize - 2),
+                    color: colors.text,
+                    marginTop: '4px',
+                    opacity: 0.7,
+                    fontWeight: 'normal',
+                    fontStyle: 'italic',
+                    position: 'relative',
+                    zIndex: 2,
+                }}>
+                    {tokenCount} token{tokenCount !== 1 ? 's' : ''}
+                </div>
+            )}
 
             {/* Token dots (visual representation) */}
             {renderTokenDots()}
