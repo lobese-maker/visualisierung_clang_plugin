@@ -1,28 +1,27 @@
 import React from 'react';
-import { useAtomValue, useAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import {
+    currentStateAtom,
     currentStateIdAtom,
-    firingTransitionAtom,
-    fireAnimationAtom,
     isAtBranchingPointAtom,
     availableTransitionsAtom,
-    currentStateAtom,
+    fireAnimationAtom,
+    firingTransitionAtom,
     selectedPathsAtom,
     transitionMapAtom
-} from '../atoms';
-import { useTransitionFiring } from '../hooks/useTransitionFiring';
+} from '../atoms/petriNetAtoms';
+import { showClickHelpAtom } from '../atoms/petriNetAtoms';
 
-const StatusPanel = () => {
+const StatusPanel = ({ onTransitionClick }) => {
+    const currentState = useAtomValue(currentStateAtom);
     const currentStateId = useAtomValue(currentStateIdAtom);
-    const firingTransition = useAtomValue(firingTransitionAtom);
-    const fireAnimation = useAtomValue(fireAnimationAtom);
     const isAtBranchingPoint = useAtomValue(isAtBranchingPointAtom);
     const availableTransitions = useAtomValue(availableTransitionsAtom);
-    const currentState = useAtomValue(currentStateAtom);
-    const [selectedPaths, setSelectedPaths] = useAtom(selectedPathsAtom);
+    const fireAnimation = useAtomValue(fireAnimationAtom);
+    const firingTransition = useAtomValue(firingTransitionAtom);
+    const selectedPaths = useAtomValue(selectedPathsAtom);
     const transitionMap = useAtomValue(transitionMapAtom);
-
-    const { handleTransitionClick } = useTransitionFiring();
+    const setShowClickHelp = useSetAtom(showClickHelpAtom);
 
     return (
         <div style={{
@@ -132,10 +131,10 @@ const StatusPanel = () => {
                                 gridTemplateColumns: `repeat(${Math.min(availableTransitions.length, 3)}, 1fr)`,
                                 gap: '10px'
                             }}>
-                                {availableTransitions.map((transition, index) => (
+                                {availableTransitions.map((transition) => (
                                     <button
                                         key={transition.transitionId}
-                                        onClick={() => handleTransitionClick(transition.transitionId)}
+                                        onClick={() => onTransitionClick(transition.transitionId)}
                                         style={{
                                             padding: '12px',
                                             background: 'linear-gradient(135deg, #bbdefb, #90caf9)',

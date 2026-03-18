@@ -1,6 +1,9 @@
+import { MarkerType } from 'reactflow';
+import { parseHtmlLabel } from './htmlParser';
+
 let elkPromise = null;
 
-export const getELK = async () => {
+const getELK = async () => {
     if (!elkPromise) {
         elkPromise = import('elkjs/lib/elk.bundled.js').then(module => {
             const ELK = module.default;
@@ -41,4 +44,73 @@ export const createELKGraph = (nodes, edges) => {
             targets: [edge.target],
         }))
     };
+};
+
+export const applyELKLayout = async (nodes, edges) => {
+    console.log('Applying ELK.js layout...');
+
+    try {
+        const elk = await getELK();
+        const elkGraph = createELKGraph(nodes, edges);
+        const layout = await elk.layout(elkGraph);
+
+        if (layout && layout.children) {
+            const positionedNodes = nodes.map(node => {
+                const elkNode = layout.children.find(n => n.id === node.id);
+                const position = elkNode ? { x: elkNode.x, y: elkNode.y } : node.position;
+
+                return {
+                    ...node,
+                    position,
+                    data: {
+                        ...node.data,
+                        isClickable: false,
+                        parsedLabel: parseHtmlLabel(node.data.htmlLabel) || node.data.label,
+                        rawHtmlLabel: node.data.htmlLabel
+                    }
+                };
+            });
+
+            const positionedEdges = edges.map(edge => ({
+                ...edge,
+                markerEnd: {
+                    type: MarkerType.ArrowClosed,
+                    color: '#b1b1b7',
+                    width: 15,
+                    height: 15,
+                }
+            }));
+
+            return { nodes: positionedNodes, edges: positionedEdges, success: true };
+        }
+    } catch (error) {
+        console.error('ELK layout failed:', error);
+        return { success: false };
+    }
+};
+
+export const applyManualLayout = (nodes, edges) => {
+    console.log('Applying manual layout...');
+
+    const positionedNodes = nodes.map(node => ({
+        ...node,
+        data: {
+            ...node.data,
+            isClickable: false,
+            parsedLabel: parseHtmlLabel(node.data.htmlLabel) || node.data.label,
+            rawHtmlLabel: node.data.htmlLabel
+        }
+    }));
+
+    const positionedEdges = edges.map(edge => ({
+        ...edge,
+        markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: '#b1b1b7',
+            width: 15,
+            height: 15,
+        }
+    }));
+
+    return { nodes: positionedNodes, edges: positionedEdges };
 };

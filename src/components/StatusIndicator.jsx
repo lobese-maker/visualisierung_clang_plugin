@@ -2,17 +2,15 @@ import React from 'react';
 import { useAtomValue } from 'jotai';
 import {
     currentStateIdAtom,
-    firingTransitionAtom,
-    fireAnimationAtom,
     availableTransitionsAtom,
+    fireAnimationAtom,
     elkAvailableAtom
-} from '../atoms';
+} from '../atoms/petriNetAtoms';
 
 const StatusIndicator = () => {
     const currentStateId = useAtomValue(currentStateIdAtom);
-    const firingTransition = useAtomValue(firingTransitionAtom);
-    const fireAnimation = useAtomValue(fireAnimationAtom);
     const availableTransitions = useAtomValue(availableTransitionsAtom);
+    const fireAnimation = useAtomValue(fireAnimationAtom);
     const elkAvailable = useAtomValue(elkAvailableAtom);
 
     return (
@@ -42,7 +40,7 @@ const StatusIndicator = () => {
             }}>
                 {fireAnimation ?
                     <span style={{ color: '#ff9800', fontWeight: 'bold' }}>
-                        Processing {firingTransition}...
+                        Processing...
                     </span> :
                     availableTransitions.length > 0 ?
                         <span>

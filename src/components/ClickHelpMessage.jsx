@@ -1,11 +1,9 @@
 import React from 'react';
-import { useAtom } from 'jotai';
-import { showClickHelpAtom } from '../atoms';
+import { useSetAtom } from 'jotai';
+import { showClickHelpAtom } from '../atoms/petriNetAtoms';
 
 const ClickHelpMessage = () => {
-    const [showClickHelp, setShowClickHelp] = useAtom(showClickHelpAtom);
-
-    if (!showClickHelp) return null;
+    const setShowClickHelp = useSetAtom(showClickHelpAtom);
 
     return (
         <div style={{

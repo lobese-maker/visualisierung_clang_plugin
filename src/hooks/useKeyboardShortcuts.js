@@ -1,25 +1,23 @@
 import { useEffect } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
-import { fireAnimationAtom, showClickHelpAtom } from '../atoms';
+import { showClickHelpAtom } from '../atoms/petriNetAtoms';
 
-export const useKeyboardShortcuts = (handleNext) => {
-    const fireAnimation = useAtomValue(fireAnimationAtom);
+export const useKeyboardShortcuts = (onNext, fireAnimation) => {
     const setShowClickHelp = useSetAtom(showClickHelpAtom);
-    const showClickHelp = useAtomValue(showClickHelpAtom);
 
     useEffect(() => {
         const handleKeyDown = (event) => {
             if (event.code === 'Space' && !fireAnimation) {
                 event.preventDefault();
-                handleNext();
+                onNext();
             }
 
-            if (event.code === 'Escape' && showClickHelp) {
+            if (event.code === 'Escape') {
                 setShowClickHelp(false);
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleNext, fireAnimation, showClickHelp, setShowClickHelp]);
+    }, [onNext, fireAnimation, setShowClickHelp]);
 };

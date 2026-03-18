@@ -4,37 +4,26 @@ import {
     autoLayoutAtom,
     elkAvailableAtom,
     currentStateIdAtom,
-    firingTransitionAtom,
-    fireAnimationAtom,
-    lastClickedTransitionAtom,
     isAtBranchingPointAtom,
     isAtFinalStateAtom,
-    availableTransitionsAtom,
-    isProcessingAtom
-} from '../atoms';
-import { useTransitionFiring } from '../hooks/useTransitionFiring';
-import { useLayout } from '../hooks/useLayout';
+    fireAnimationAtom,
+    firingTransitionAtom,
+    lastClickedTransitionAtom,
+    availableTransitionsAtom
+} from '../atoms/petriNetAtoms';
 
-const ControlPanel = () => {
+const ControlPanel = ({ onNext, onPrevious, onReset, onReapplyLayout }) => {
     const [autoLayout, setAutoLayout] = useAtom(autoLayoutAtom);
     const elkAvailable = useAtomValue(elkAvailableAtom);
     const currentStateId = useAtomValue(currentStateIdAtom);
-    const firingTransition = useAtomValue(firingTransitionAtom);
-    const fireAnimation = useAtomValue(fireAnimationAtom);
-    const lastClickedTransition = useAtomValue(lastClickedTransitionAtom);
     const isAtBranchingPoint = useAtomValue(isAtBranchingPointAtom);
     const isAtFinalState = useAtomValue(isAtFinalStateAtom);
+    const fireAnimation = useAtomValue(fireAnimationAtom);
+    const firingTransition = useAtomValue(firingTransitionAtom);
+    const lastClickedTransition = useAtomValue(lastClickedTransitionAtom);
     const availableTransitions = useAtomValue(availableTransitionsAtom);
-    const isProcessing = useAtomValue(isProcessingAtom);
 
-    const { handleNext, handlePrevious, handleReset } = useTransitionFiring();
-    const { applyELKLayout } = useLayout();
-
-    const getStateColor = () => {
-        if (isAtBranchingPoint) return '#9c27b0';
-        if (isAtFinalState) return '#4caf50';
-        return '#2196f3';
-    };
+    const stateColor = isAtBranchingPoint ? '#9c27b0' : isAtFinalState ? '#4caf50' : '#2196f3';
 
     return (
         <div style={{
@@ -46,6 +35,9 @@ const ControlPanel = () => {
             alignItems: 'center',
             justifyContent: 'space-between',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            flexShrink: 0,
+            height: '70px',
+            boxSizing: 'border-box'
         }}>
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                 <h3 style={{ margin: 0, color: '#2d3748' }}>Petri Net Simulator</h3>
@@ -69,7 +61,7 @@ const ControlPanel = () => {
 
                     {autoLayout && (
                         <button
-                            onClick={applyELKLayout}
+                            onClick={onReapplyLayout}
                             style={{
                                 background: '#2196f3',
                                 color: 'white',
@@ -89,7 +81,7 @@ const ControlPanel = () => {
 
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{
-                    background: getStateColor(),
+                    background: stateColor,
                     padding: '8px 16px',
                     borderRadius: '6px',
                     fontWeight: '600',
@@ -107,7 +99,7 @@ const ControlPanel = () => {
                             fontWeight: 'bold',
                             animation: 'pulse 1s infinite'
                         }}>
-                            ⚡ {firingTransition}
+                            {firingTransition}
                         </span>
                     )}
                     {lastClickedTransition && !fireAnimation && (
@@ -126,55 +118,56 @@ const ControlPanel = () => {
 
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
-                        onClick={handlePrevious}
-                        disabled={history.length <= 1 || isProcessing}
+                        onClick={onPrevious}
+                        disabled={fireAnimation}
                         style={{
-                            background: history.length <= 1 || isProcessing ? '#e2e8f0' : '#757575',
-                            color: history.length <= 1 || isProcessing ? '#a0aec0' : 'white',
+                            background: '#757575',
+                            color: 'white',
                             border: 'none',
                             padding: '10px 20px',
                             borderRadius: '6px',
-                            cursor: history.length <= 1 || isProcessing ? 'not-allowed' : 'pointer',
+                            cursor: fireAnimation ? 'not-allowed' : 'pointer',
                             fontWeight: '500',
                             fontSize: '14px',
-                            minWidth: '100px'
+                            minWidth: '100px',
+                            opacity: fireAnimation ? 0.6 : 1
                         }}
                     >
                         ← Back
                     </button>
 
                     <button
-                        onClick={handleNext}
-                        disabled={availableTransitions.length === 0 || isProcessing}
+                        onClick={onNext}
+                        disabled={availableTransitions.length === 0 || fireAnimation}
                         style={{
-                            background: isProcessing ? '#ff9800' :
+                            background: fireAnimation ? '#ff9800' :
                                 availableTransitions.length === 0 ? '#e2e8f0' :
                                     isAtBranchingPoint ? '#9c27b0' : '#4caf50',
-                            color: isProcessing || availableTransitions.length === 0 ? '#a0aec0' : 'white',
+                            color: fireAnimation || availableTransitions.length === 0 ? '#a0aec0' : 'white',
                             border: 'none',
                             padding: '10px 20px',
                             borderRadius: '6px',
-                            cursor: availableTransitions.length === 0 || isProcessing ? 'not-allowed' : 'pointer',
+                            cursor: availableTransitions.length === 0 || fireAnimation ? 'not-allowed' : 'pointer',
                             fontWeight: '500',
                             fontSize: '14px',
                             minWidth: '140px'
                         }}
                     >
-                        {isProcessing ? 'Processing...' :
+                        {fireAnimation ? 'Processing...' :
                             availableTransitions.length > 1 ? 'Choose Transition ↓' :
                                 isAtBranchingPoint ? 'Choose Path →' : 'Next →'}
                     </button>
 
                     <button
-                        onClick={handleReset}
-                        disabled={isProcessing}
+                        onClick={onReset}
+                        disabled={fireAnimation}
                         style={{
                             background: '#f44336',
                             color: 'white',
                             border: 'none',
                             padding: '10px 20px',
                             borderRadius: '6px',
-                            cursor: isProcessing ? 'not-allowed' : 'pointer',
+                            cursor: fireAnimation ? 'not-allowed' : 'pointer',
                             fontWeight: '500',
                             fontSize: '14px'
                         }}
